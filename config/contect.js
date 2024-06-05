@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 
 // Ensure that the environment variable DB_URL is defined in your .env file
 const url = process.env.DB_URL;
-console.log(`Connecting to MongoDB at ${url}`);
+
 
 const connect = async () => {
     try {

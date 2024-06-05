@@ -1,12 +1,8 @@
+import { ObjectId } from "mongodb";
 import mongoose from "mongoose";
 import { Schema } from "mongoose";
 
 const authorsSchema = new Schema({
-  _id: {
-    type: String,
-    required: true,
-   
-  },
   name: {
     type: String,
     required: true,

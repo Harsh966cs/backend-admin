@@ -3,8 +3,9 @@ import bodyParser from 'body-parser';
 import express from 'express';
 import mongoose from 'mongoose';
 import { MongoClient } from "mongodb";
-
-const uri = "mongodb://localhost:27017"; // Specify the correct database
+import 'dotenv/config'
+const uri = process.env.DB_URL; // Specify the correct database
+console.log(uri)
 const client = new MongoClient(uri);
 const app = express();
 
@@ -25,7 +26,9 @@ const connectClient = async () => {
 export const AdminCreate = async (req, res) => {
   try {
     const newAuthor = new Authors(req.body);
-    const savedAuthor = await newAuthor.save();
+    const database = client.db("MyDatabase");
+    const postData = database.collection("MyAuthor");
+    const savedAuthor = await postData.insertOne(newAuthor);
     res.status(201).json(savedAuthor);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -35,7 +38,9 @@ export const AdminCreate = async (req, res) => {
 export const getAuthor = async (req, res) => {
   try {
     const { name, password } = req.body;
-    const author = await Authors.findOne({ name });
+    const database = client.db("MyDatabase");
+    const postData = database.collection("MyAuthor");
+    const author = await postData.findOne({ name });
     if (!author) {
       return res.status(400).send({ message: 'User does not exist' });
     }
@@ -51,8 +56,8 @@ export const getAuthor = async (req, res) => {
 export const getPostCount = async (req, res) => {
   try {
     await connectClient();
-    const database = client.db("test");
-    const postData = database.collection("posts");
+    const database = client.db("MyDatabase");
+    const postData = database.collection("MyCollection");
     const estimation = await postData.estimatedDocumentCount();
     if (estimation === 0) {
       return res.status(400).send({ message: 'There is no data exist' });
@@ -71,8 +76,8 @@ export const getFilterByDate = async (req, res) => {
     const Month = parseInt(req.params.month); // Subtract 1 because months are 0-indexed in JS Date
     const Day = parseInt(req.params.day);
     console.log(Year, Month, Day);
-    const database = client.db("test");
-    const postData = database.collection("posts");
+    const database = client.db("MyDatabase");
+    const postData = database.collection("MyCollection");
     const queryData = await postData.find({
       publishedAt: { $lte: new Date(Year, Month, Day, 0, 0, 0) }
     }).toArray();
@@ -98,11 +103,10 @@ export const getFilterByTitle = async (req, res) => {
   }
   console.log(queryObject);
 
-  const database = client.db("test");
-  const postData = database.collection("posts");
-  console.log(queryObject);
-
- 
+  const database = client.db("MyDatabase");
+  const postData = database.collection("MyCollection");
+  const queryData = await postData.find(queryObject).toArray();
+  console.log(queryData);
 
   if(sort){
       let sortFix = sort.split(",").join(" ");
@@ -115,7 +119,7 @@ export const getFilterByTitle = async (req, res) => {
 
 
   try {
-    const myData = await apiData; // Use Database model
+    const myData = queryData; // Use Database model
     res.status(200).json({ myData });
    
 } catch (error) {
