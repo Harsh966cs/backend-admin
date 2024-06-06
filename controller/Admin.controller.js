@@ -26,9 +26,15 @@ const connectClient = async () => {
 export const AdminCreate = async (req, res) => {
   try {
     const newAuthor = new Authors(req.body);
+    const author = await newAuthor.save();
     const database = client.db("MyDatabase");
     const postData = database.collection("MyAuthor");
-    const savedAuthor = await postData.insertOne(newAuthor);
+    const autherExist = await postData.findOne({name:author.name});
+    if(autherExist)
+    {
+      return res.status(404).send({ 'message': 'user already exist'});
+    }
+    const savedAuthor = await postData.insertOne(author);
     res.status(201).json(savedAuthor);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -73,22 +79,33 @@ export const getFilterByDate = async (req, res) => {
   try {
     await connectClient();
     const Year = parseInt(req.params.year);
-    const Month = parseInt(req.params.month); // Subtract 1 because months are 0-indexed in JS Date
+    const Month = parseInt(req.params.month) - 1; // Subtract 1 because months are 0-indexed in JS Date
     const Day = parseInt(req.params.day);
     console.log(Year, Month, Day);
-    const database = client.db("MyDatabase");
-    const postData = database.collection("MyCollection");
+
+    const startDate = new Date(Date.UTC(Year, Month, Day,0,0,0));
+    const endDate = new Date(Date.UTC(Year, Month, Day + 1,0,0,0));
+    console.log(`Start Date: ${startDate.toISOString()}`);
+    console.log(`End Date: ${endDate.toISOString()}`);
+    
+    const database = client.db('MyDatabase');
+    const postData = database.collection('MyCollection');
     const queryData = await postData.find({
-      publishedAt: { $lte: new Date(Year, Month, Day, 0, 0, 0) }
+      publishedAt: {
+        $gte: startDate,
+        $lt: endDate
+      }
     }).toArray();
+
     console.log(queryData);
     res.status(200).send({ queryData });
-  } catch (error) {
-    res.status(500).send({ message: error });
-  } finally {
+} catch (error) {
+    console.error(error); // Log the error for debugging purposes
+    res.status(500).send({ message: error.message }); // Send a more descriptive error message
+} finally {
     await client.close();
     isConnected = false; // Reset the connection flag
-  }
+}
 };
 
 

@@ -1,30 +1,21 @@
-import { ObjectId } from "mongodb";
 import mongoose from "mongoose";
 import { Schema } from "mongoose";
 
 const authorsSchema = new Schema({
   name: {
     type: String,
-    required: true,
+    required: [true, "Name is required"],
+    unique: [true, "Name must be unique"]
   },
   password:{
-    type:String,
-    required: true,
-    lowercase:true
+    type: String,
+    required: [true, "Password is required"],
+    lowercase: [true, "Password must be lowercase"]
   },
-  numPosts: {
-    type: Number,
- 
-  },
-  numLikes: {
-    type: Number,
-
-  },
-  
 }, {
   timestamps: true,
 });
 
-const Authors = mongoose.model("Authors", authorsSchema);
+const AuthorsData = mongoose.model("Authors", authorsSchema);
 
-export default Authors
+export default AuthorsData;

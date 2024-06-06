@@ -3,8 +3,10 @@ import bodyParser from 'body-parser';
 import connect from './config/contect.js';
 import Admin from './routes/Admin.req.js';
  import Posts from './routes/Posts.req.js'
+ import CORS from 'cors';
 
 const app = express()
+app.use(CORS())
 const port = process.env.PORT || 3000 
 
 
