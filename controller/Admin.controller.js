@@ -85,8 +85,7 @@ export const getFilterByDate = async (req, res) => {
 
     const startDate = new Date(Date.UTC(Year, Month, Day,0,0,0));
     const endDate = new Date(Date.UTC(Year, Month, Day + 1,0,0,0));
-    console.log(`Start Date: ${startDate.toISOString()}`);
-    console.log(`End Date: ${endDate.toISOString()}`);
+  
     
     const database = client.db('MyDatabase');
     const postData = database.collection('MyCollection');
@@ -97,7 +96,7 @@ export const getFilterByDate = async (req, res) => {
       }
     }).toArray();
 
-    console.log(queryData);
+   
     res.status(200).send({ queryData });
 } catch (error) {
     console.error(error); // Log the error for debugging purposes
@@ -146,6 +145,74 @@ export const getFilterByTitle = async (req, res) => {
 
 
 
+export const getPanelData = (async(req,res)=>{
+      
+  try {
+    const month = parseInt(req.params.month)-1 ; // Subtract 1 because JS Date months are 0-indexed
+    console.log(month);
+    const dailyCounts = [];
+    
+    await connectClient();
+
+    for (let day = 1; day <= 30; day++) {
+      const database = client.db("MyDatabase");
+      const postData = database.collection("MyCollection");
+
+      const startDate = new Date(Date.UTC(2024, month, day, 0, 0, 0));
+      const endDate = new Date(Date.UTC(2024, month, day + 1, 0, 0, 0));
+      console.log(startDate, endDate);
+
+      const count = await postData.countDocuments({
+        publishedAt: {
+          $gte: startDate,
+          $lt: endDate
+        }
+      });
+
+      dailyCounts.push(count);
+      console.log(`Day ${day}: ${count} documents`);
+    }
+
+    res.status(200).send({ dailyCounts });
+  } catch (error) {
+    res.status(500).send({ message: error.message });
+  } finally {
+    await client.close();
+    isConnected = false; // Reset the connection flag
+  }
+});
 
 
+
+export const getYearlyPanelData = (async(req, res) => {
+  try {
+    const year = parseInt(req.params.year); // Get the year from the request parameters
+    console.log(year);
+
+    await connectClient();
+
+    const database = client.db("MyDatabase");
+    const postData = database.collection("MyCollection");
+
+    const startDate = new Date(Date.UTC(year, 0, 1, 0, 0, 0)); // January 1st of the year
+    const endDate = new Date(Date.UTC(year + 1, 0, 1, 0, 0, 0)); // January 1st of the next year
+    console.log(startDate, endDate);
+
+    const count = await postData.countDocuments({
+      publishedAt: {
+        $gte: startDate,
+        $lt: endDate
+      }
+    });
+
+    console.log(`Year ${year}: ${count} documents`);
+
+    res.status(200).send({ yearlyCount: count });
+  } catch (error) {
+    res.status(500).send({ message: error.message });
+  } finally {
+    await client.close();
+    isConnected = false; // Reset the connection flag
+  }
+});
 
