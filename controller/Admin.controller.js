@@ -1,11 +1,13 @@
-import Authors from "../model/auther.js"; // Ensure the model file name is correct
+import Authors from "../model/auther.js"; 
 import bodyParser from 'body-parser';
 import express from 'express';
 import mongoose from 'mongoose';
 import { MongoClient } from "mongodb";
-import 'dotenv/config'
-const uri = process.env.DB_URL; // Specify the correct database
-console.log(uri)
+import 'dotenv/config';
+
+const uri = process.env.DB_URL;
+console.log(uri);
+
 const client = new MongoClient(uri);
 const app = express();
 
@@ -25,15 +27,18 @@ const connectClient = async () => {
 
 export const AdminCreate = async (req, res) => {
   try {
+    await connectClient();
+
     const newAuthor = new Authors(req.body);
     const author = await newAuthor.save();
     const database = client.db("MyDatabase");
     const postData = database.collection("MyAuthor");
-    const autherExist = await postData.findOne({name:author.name});
-    if(autherExist)
-    {
-      return res.status(404).send({ 'message': 'user already exist'});
+    const autherExist = await postData.findOne({ name: author.name });
+
+    if (autherExist) {
+      return res.status(404).send({ 'message': 'User already exists' });
     }
+
     const savedAuthor = await postData.insertOne(author);
     res.status(201).json(savedAuthor);
   } catch (error) {
@@ -43,10 +48,13 @@ export const AdminCreate = async (req, res) => {
 
 export const getAuthor = async (req, res) => {
   try {
+    await connectClient();
+
     const { name, password } = req.body;
     const database = client.db("MyDatabase");
     const postData = database.collection("MyAuthor");
     const author = await postData.findOne({ name });
+
     if (!author) {
       return res.status(400).send({ message: 'User does not exist' });
     }
@@ -62,12 +70,15 @@ export const getAuthor = async (req, res) => {
 export const getPostCount = async (req, res) => {
   try {
     await connectClient();
+
     const database = client.db("MyDatabase");
     const postData = database.collection("MyCollection");
     const estimation = await postData.estimatedDocumentCount();
+
     if (estimation === 0) {
       return res.status(400).send({ message: 'There is no data exist' });
     }
+
     console.log(estimation);
     res.status(200).send({ estimation });
   } catch (error) {
@@ -78,15 +89,15 @@ export const getPostCount = async (req, res) => {
 export const getFilterByDate = async (req, res) => {
   try {
     await connectClient();
+
     const Year = parseInt(req.params.year);
-    const Month = parseInt(req.params.month) - 1; // Subtract 1 because months are 0-indexed in JS Date
+    const Month = parseInt(req.params.month) - 1; 
     const Day = parseInt(req.params.day);
     console.log(Year, Month, Day);
 
-    const startDate = new Date(Date.UTC(Year, Month, Day,0,0,0));
-    const endDate = new Date(Date.UTC(Year, Month, Day + 1,0,0,0));
-  
-    
+    const startDate = new Date(Date.UTC(Year, Month, Day, 0, 0, 0));
+    const endDate = new Date(Date.UTC(Year, Month, Day + 1, 0, 0, 0));
+
     const database = client.db('MyDatabase');
     const postData = database.collection('MyCollection');
     const queryData = await postData.find({
@@ -96,62 +107,64 @@ export const getFilterByDate = async (req, res) => {
       }
     }).toArray();
 
-   
     res.status(200).send({ queryData });
-} catch (error) {
-    console.error(error); // Log the error for debugging purposes
-    res.status(500).send({ message: error.message }); // Send a more descriptive error message
-} finally {
+  } catch (error) {
+    console.error(error); 
+    res.status(500).send({ message: error.message });
+  } finally {
     await client.close();
-    isConnected = false; // Reset the connection flag
-}
+    isConnected = false; 
+  }
 };
-
 
 export const getFilterByTitle = async (req, res) => {
-  await connectClient();
-  const {title,sort,select} = req.query;
-  const queryObject = {};
-
-
-  if(title){
-      queryObject.title = { $regex: title, $options: "i"};
-  }
-  console.log(queryObject);
-
-  const database = client.db("MyDatabase");
-  const postData = database.collection("MyCollection");
-  const queryData = await postData.find(queryObject).toArray();
-  console.log(queryData);
-
-  if(sort){
-      let sortFix = sort.split(",").join(" ");
-      apiData = apiData.sort(sortFix);
-  }
-  if(select){
-      let selectFix = select.split(",").join(" ");
-      apiData = apiData.select(selectFix);
-  }
-
-
   try {
-    const myData = queryData; // Use Database model
-    res.status(200).json({ myData });
-   
-} catch (error) {
+    await connectClient();
+
+    const { title, sort, select } = req.query;
+    const queryObject = {};
+
+    if (title) {
+      queryObject.title = { $regex: title, $options: "i" };
+    }
+    console.log(queryObject);
+
+    const database = client.db("MyDatabase");
+    const postData = database.collection("MyCollection");
+    let queryData = await postData.find(queryObject).toArray();
+    console.log(queryData);
+
+    if (sort) {
+      let sortFix = sort.split(",").join(" ");
+      queryData = queryData.sort((a, b) => {
+        if (sortFix === "asc") return a.title.localeCompare(b.title);
+        if (sortFix === "desc") return b.title.localeCompare(a.title);
+        return 0;
+      });
+    }
+    if (select) {
+      let selectFix = select.split(",").join(" ");
+      queryData = queryData.map(item => {
+        let result = {};
+        selectFix.split(" ").forEach(field => {
+          if (item[field] !== undefined) result[field] = item[field];
+        });
+        return result;
+      });
+    }
+
+    res.status(200).json({ myData: queryData });
+  } catch (error) {
     res.status(500).json({ message: error.message });
-}
+  }
 };
 
-
-
-export const getPanelData = (async(req,res)=>{
-      
+export const getPanelData = async (req, res) => {
   try {
-    const month = parseInt(req.params.month)-1 ; // Subtract 1 because JS Date months are 0-indexed
+    const month = parseInt(req.params.month) - 1; 
     console.log(month);
     const dailyCounts = [];
-    
+
     await connectClient();
 
     for (let day = 1; day <= 30; day++) {
@@ -178,15 +191,13 @@ export const getPanelData = (async(req,res)=>{
     res.status(500).send({ message: error.message });
   } finally {
     await client.close();
-    isConnected = false; // Reset the connection flag
+    isConnected = false;
   }
-});
+};
 
-
-
-export const getYearlyPanelData = (async(req, res) => {
+export const getYearlyPanelData = async (req, res) => {
   try {
-    const year = parseInt(req.params.year); // Get the year from the request parameters
+    const year = parseInt(req.params.year); 
     console.log(year);
 
     await connectClient();
@@ -194,8 +205,8 @@ export const getYearlyPanelData = (async(req, res) => {
     const database = client.db("MyDatabase");
     const postData = database.collection("MyCollection");
 
-    const startDate = new Date(Date.UTC(year, 0, 1, 0, 0, 0)); // January 1st of the year
-    const endDate = new Date(Date.UTC(year + 1, 0, 1, 0, 0, 0)); // January 1st of the next year
+    const startDate = new Date(Date.UTC(year, 0, 1, 0, 0, 0)); 
+    const endDate = new Date(Date.UTC(year + 1, 0, 1, 0, 0, 0)); 
     console.log(startDate, endDate);
 
     const count = await postData.countDocuments({
@@ -212,7 +223,6 @@ export const getYearlyPanelData = (async(req, res) => {
     res.status(500).send({ message: error.message });
   } finally {
     await client.close();
-    isConnected = false; // Reset the connection flag
+    isConnected = false; 
   }
-});
-
+};
