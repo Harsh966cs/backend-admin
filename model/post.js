@@ -9,7 +9,7 @@ const postSchema = new Schema({
   description: { type: String, required: [true, "Description is required"] },
   url: { type: String, required: [true, "URL is required"], unique: [true, "URL must be unique"] },
   urlToImage: { type: String, required: [true, "URL to image is required"], unique: [true, "URL to image must be unique"] },
-  publishedAt: { type: Date, default:Date.now  },
+  publishedAt: { type: Date, default:new Date()  },
   content: { type: String }
 });
 
